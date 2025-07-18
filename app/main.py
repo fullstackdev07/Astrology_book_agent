@@ -1,0 +1,125 @@
+# app/main.py
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.concurrency import run_in_threadpool
+from pydantic import BaseModel, Field
+from app.book_writer import generate_astrology_book
+from app.book_pdf_exporter import save_book_as_pdf
+from app.astrology_api_client import get_natal_chart_data
+from app.prompt_builder import build_data_extraction_prompt # <-- IMPORT NEW PROMPT
+from dotenv import load_dotenv
+import os
+import re
+import traceback
+import json
+from openai import AsyncOpenAI
+
+load_dotenv()
+
+# Initialize OpenAI client for the parsing step
+openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+MODEL_TEXT = "gpt-4-1106-preview" # Use a smart model for parsing
+
+app = FastAPI(
+    title="Personal Portrait Generator",
+    description="An API to generate a personalized interpretation book based on a plain text birth prompt.",
+    version="3.0.0"
+)
+
+# NEW: Simplified BookRequest model
+class BookRequest(BaseModel):
+    user_prompt: str = Field(..., description="The user's birth information in a single sentence.", example="September 4, 1986, 3:30 PM, West Palm Beach, Florida")
+    num_pages: int = Field(150, description="Desired book length: 50, 100, 150, or 200")
+
+def sanitize_filename(text: str) -> str:
+    """Removes invalid characters from a string to make it a valid filename."""
+    sanitized = re.sub(r'[\\/*?:"<>|]', "", text)
+    return sanitized[:50].strip().replace(' ', '_')
+
+# NEW: AI-powered function to parse the user's text prompt
+async def extract_birth_data_from_prompt(prompt: str) -> dict:
+    """
+    Uses an LLM to parse a natural language prompt into structured birth data,
+    including geocoded location and the correct timezone offset.
+    """
+    print(f"Parsing prompt with AI: '{prompt}'")
+    extraction_prompt = build_data_extraction_prompt(prompt)
+    
+    try:
+        response = await openai.chat.completions.create(
+            model=MODEL_TEXT,
+            messages=[{"role": "user", "content": extraction_prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.0 # Be precise
+        )
+        
+        structured_data = json.loads(response.choices[0].message.content)
+        print("Successfully parsed prompt into structured data:", structured_data)
+        
+        # We need to rename the timezone key for our downstream function
+        structured_data['tzone'] = structured_data.pop('timezone_offset')
+        structured_data['lon'] = structured_data.pop('longitude')
+        structured_data['lat'] = structured_data.pop('latitude')
+        structured_data['minute'] = structured_data.pop('min')
+
+        return structured_data
+    except Exception as e:
+        print(f"Failed to parse prompt with AI: {e}")
+        raise ValueError("Could not understand the provided birth information. Please try again with a clear format like 'Month Day, Year, Time, City, State'.")
+
+
+@app.post("/generate-book/", summary="Generate a Personal Portrait Book")
+async def generate_book(request: BookRequest):
+    """
+    Generates a complete PDF book from a simple text prompt containing birth info.
+    """
+    if not request.user_prompt:
+        raise HTTPException(status_code=400, detail="The user prompt cannot be empty.")
+        
+    if request.num_pages not in [20, 100, 150, 200]:
+        raise HTTPException(status_code=400, detail="Number of pages must be one of: 20, 100, 150, 200.")
+
+    print(f"--- Starting Book Generation for prompt: '{request.user_prompt}' ---")
+
+    try:
+        # Step 1: Use the AI to parse the text prompt into structured data
+        birth_data = await extract_birth_data_from_prompt(request.user_prompt)
+
+        # Step 2: Fetch the detailed chart data using the parsed information
+        print("Fetching chart data from AstrologyAPI...")
+        natal_chart_data = await get_natal_chart_data(**birth_data)
+
+        # Step 3: Generate the book content (rest of the flow is the same)
+        book_title = "The Blueprint of You"
+        print(f"Generating book components for: '{book_title}'...")
+        book_data = await generate_astrology_book(
+            natal_chart_json=natal_chart_data,
+            num_pages=request.num_pages
+        )
+        print("Book components generated successfully.")
+
+        filename = f"{sanitize_filename(book_title)}.pdf"
+        print(f"Generating PDF: {filename}...")
+        
+        output_pdf_path = await run_in_threadpool(
+            save_book_as_pdf,
+            title=book_title,
+            book_data=book_data,
+            filename=filename
+        )
+        print("\n--- SUCCESS ---")
+        print(f"Personalized book saved to: {output_pdf_path}")
+        
+        pdf_url = f"/generated_books/{filename}"
+
+        return {
+            "title": book_title,
+            "pdf_file": pdf_url,
+            "preview": book_data.get('prologue_text', '')[:1500] + "..."
+        }
+
+    except Exception as e:
+        print(f"\n--- AN ERROR OCCURRED ---")
+        print(f"An error occurred during book generation: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
