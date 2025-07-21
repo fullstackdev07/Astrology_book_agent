@@ -6,13 +6,14 @@ from pydantic import BaseModel, Field
 from app.book_writer import generate_astrology_book
 from app.book_pdf_exporter import save_book_as_pdf
 from app.astrology_api_client import get_natal_chart_data
-from app.prompt_builder import build_data_extraction_prompt # <-- IMPORT NEW PROMPT
+from app.prompt_builder import build_data_extraction_prompt 
 from dotenv import load_dotenv
 import os
 import re
 import traceback
 import json
 from openai import AsyncOpenAI
+from datetime import datetime 
 
 load_dotenv()
 
@@ -76,8 +77,8 @@ async def generate_book(request: BookRequest):
     if not request.user_prompt:
         raise HTTPException(status_code=400, detail="The user prompt cannot be empty.")
         
-    if request.num_pages not in [20, 100, 150, 200]:
-        raise HTTPException(status_code=400, detail="Number of pages must be one of: 20, 100, 150, 200.")
+    if request.num_pages not in [30, 100, 150, 200]:
+        raise HTTPException(status_code=400, detail="Number of pages must be one of: 30, 100, 150, 200.")
 
     print(f"--- Starting Book Generation for prompt: '{request.user_prompt}' ---")
 
@@ -98,8 +99,10 @@ async def generate_book(request: BookRequest):
         )
         print("Book components generated successfully.")
 
-        filename = f"{sanitize_filename(book_title)}.pdf"
-        print(f"Generating PDF: {filename}...")
+        # <<<====== 2. THESE TWO LINES ARE CHANGED/ADDED TO CREATE A UNIQUE FILENAME ======>>>
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{sanitize_filename(book_title)}_{timestamp}.pdf"
+        print(f"Generating unique PDF: {filename}...")
         
         output_pdf_path = await run_in_threadpool(
             save_book_as_pdf,
@@ -115,7 +118,7 @@ async def generate_book(request: BookRequest):
         return {
             "title": book_title,
             "pdf_file": pdf_url,
-            "preview": book_data.get('prologue_text', '')[:1500] + "..."
+            "preview": book_data.get('introduction_text', '')[:1500] + "..."
         }
 
     except Exception as e:
