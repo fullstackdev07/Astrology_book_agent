@@ -36,7 +36,8 @@ class BookRequest(BaseModel):
     birth_date: str = Field(..., description="The user's birth date, e.g., '1986-09-04'")
     birth_time: str = Field(..., description="The user's birth time, e.g., '15:30'")
     birth_location: str = Field(..., description="The user's birth location, e.g., 'West Palm Beach, Florida'")
-    num_pages: int = Field(150, description="Desired book length: 50, 100, 150, or 200")
+    # UPDATED FIELD:
+    target_word_count: int = Field(15000, description="Desired book length: 15000, 30000, or 50000")
 
 def sanitize_filename(text: str) -> str:
     """Removes invalid characters from a string to make it a valid filename."""
@@ -85,34 +86,28 @@ async def generate_book(request: BookRequest):
     """
     Generates a complete PDF book from a simple text prompt containing birth info.
     """
-    # <<<====== 2. COMBINE the new fields into the single 'user_prompt' string your code expects ======>>>
-    # Check if any of the required fields are empty
     if not all([request.birth_date, request.birth_time, request.birth_location]):
         raise HTTPException(status_code=400, detail="Date, time, and location fields cannot be empty.")
     
-    # Recreate the single prompt string
     user_prompt = f"{request.birth_date} at {request.birth_time} in {request.birth_location}"
     
-    # The rest of your code now works perfectly because it has the 'user_prompt' variable
-    if request.num_pages not in [50, 100, 150, 200]:
-        raise HTTPException(status_code=400, detail="Number of pages must be one of: 50, 100, 150, 200.")
+    # <<<====== 2. VALIDATE the new word count field ======>>>
+    if request.target_word_count not in [15000, 30000, 50000]:
+        raise HTTPException(status_code=400, detail="Word count must be one of: 15000, 30000, 50000.")
 
     print(f"--- Starting Book Generation for prompt: '{user_prompt}' ---")
 
     try:
-        # Step 1: Use the AI to parse the text prompt into structured data (YOUR ORIGINAL LOGIC)
         birth_data = await extract_birth_data_from_prompt(user_prompt)
-
-        # Step 2: Fetch the detailed chart data using the parsed information
-        print("Fetching chart data from AstrologyAPI...")
         natal_chart_data = await get_natal_chart_data(**birth_data)
 
-        # Step 3: Generate the book content (rest of the flow is the same)
-        book_title = "The Blueprint of You"
+        book_title = "The Architecture of You" # A more fitting title
         print(f"Generating book components for: '{book_title}'...")
+
+        # <<<====== 3. PASS target_word_count to the book writer ======>>>
         book_data = await generate_astrology_book(
             natal_chart_json=natal_chart_data,
-            num_pages=request.num_pages
+            target_word_count=request.target_word_count # Pass the new parameter
         )
         print("Book components generated successfully.")
 
@@ -134,8 +129,7 @@ async def generate_book(request: BookRequest):
         return {
             "title": book_title,
             "pdf_file": pdf_url,
-            # <<<====== 3. CORRECTED the key from 'introduction_text' to 'prologue_text' ======>>>
-            "preview": book_data.get('prologue_text', '')[:1500] + "..."
+            "preview": book_data.get('prologue_text', '') + "\n\n" + book_data.get('chapters', [{}])[0].get('content', '')[:1500] + "..."
         }
 
     except Exception as e:
