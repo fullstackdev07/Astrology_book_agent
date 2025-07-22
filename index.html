@@ -3,105 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Portrait Generator</title>
+    <title>Cosmic Portrait Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --font-heading: 'Cinzel', serif;
+            --font-body: 'Poppins', sans-serif;
+            --color-gold: #FFD700;
+            --color-dark-purple: #1a1a2e;
+            --color-light-text: #e0e0e0;
+        }
+        
+        /* --- FIX: Styles for a non-scrolling, centered layout --- */
+        html, body {
+            height: 100vh; /* Use viewport height to ensure it fits the screen */
+            margin: 0;
+            overflow: hidden; /* This explicitly prevents scrolling */
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
+            font-family: var(--font-body);
+            background: url('https://images.pexels.com/photos/110854/pexels-photo-110854.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--color-light-text);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
             padding: 1rem;
             box-sizing: border-box;
         }
+        /* --- END OF FIX --- */
+
         .container {
-            background-color: #fff;
-            padding: 2rem 3rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             text-align: center;
         }
+        .form-container {
+            background: rgba(26, 26, 46, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            /* FIX: Reduced vertical padding */
+            padding: 2rem 2.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
         h1 {
-            font-size: 2rem;
-            color: #333;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            /* FIX: Slightly smaller font size */
+            font-size: 2.2rem;
+            color: #fff;
+            margin: 0 0 0.5rem 0;
+            text-shadow: 0 0 15px var(--color-gold);
+        }
+        p {
+            font-weight: 300;
+            /* FIX: Reduced margin-bottom */
             margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            /* FIX: Reduced margin-bottom */
+            margin-bottom: 1.2rem;
         }
         .form-group {
-            margin-bottom: 1.5rem;
+            flex: 1;
             text-align: left;
+        }
+        .form-group.full-width {
+            flex-basis: 100%;
+            /* FIX: Reduced margin-bottom */
+            margin-bottom: 1.2rem;
         }
         label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: 600;
+            font-weight: 400;
+            opacity: 0.9;
         }
         input, select {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #dddfe2;
-            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
             font-size: 1rem;
             box-sizing: border-box;
+            background-color: rgba(0, 0, 0, 0.3);
+            color: var(--color-light-text);
+            font-family: var(--font-body);
+        }
+        input::placeholder { color: rgba(224, 224, 224, 0.5); }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffd700' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
         }
         button {
             width: 100%;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 6px;
-            background-color: #1877f2;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:disabled {
-            background-color: #a0bdf0;
-            cursor: not-allowed;
-        }
-        button:hover:not(:disabled) {
-            background-color: #166fe5;
-        }
-        .result {
-            margin-top: 2rem;
             padding: 1rem;
-            border-radius: 6px;
-            display: none;
-            text-align: center;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #FFC800, #FFD700, #FFE66D);
+            color: var(--color-dark-purple);
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: var(--font-heading);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
         }
-        .result.loading { display: block; color: #555; background-color: #f0f2f5; }
-        .result.success { display: block; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
-        .result.error { display: block; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
-        .result a { color: #0056b3; font-weight: bold; text-decoration: none; }
+        button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 0 30px rgba(255, 215, 0, 0.7); }
+        button:disabled { background: #555; color: #999; cursor: not-allowed; box-shadow: none; }
+        .result {
+            /* FIX: Reduced margin-top */
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            background: rgba(26, 26, 46, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result.loading { display: block; }
+        .result.success { display: block; border-color: var(--color-gold); }
+        .result.error { display: block; border-color: #ff4d4d; color: #ffaeae; }
+        .result a { color: var(--color-gold); font-weight: bold; text-decoration: none; }
         .result a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Personal Portrait Generator</h1>
-        <form id="book-form">
-            <div class="form-group">
-                <label for="user-prompt">Birth Information</label>
-                <input type="text" id="user-prompt" name="user_prompt" placeholder="e.g., September 4, 1986, 3:30 PM, West Palm Beach, Florida" required>
-            </div>
-            <div class="form-group">
-                <label for="num-pages">Book Length (approx.)</label>
-                <select id="num-pages" name="num_pages">
-                    <option value="50">50 Pages</option>
-                    <option value="100">100 Pages</option>
-                    <option value="150" selected>150 Pages</option>
-                    <option value="200">200 Pages</option>
-                </select>
-            </div>
-            <button type="submit" id="generate-btn">Generate Book</button>
-        </form>
+        <div class="form-container">
+            <h1>Your Cosmic Blueprint</h1>
+            <p>Enter your birth details to generate a personalized interpretation of your soul's journey.</p>
+            <form id="book-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="birth-date">Birth Date</label>
+                        <input type="date" id="birth-date" name="birth_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="birth-time">Birth Time</label>
+                        <input type="time" id="birth-time" name="birth_time" required>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="birth-location">Birth Location</label>
+                    <input type="text" id="birth-location" name="birth_location" placeholder="e.g., City, State/Country" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="num-pages">Desired Book Length</label>
+                    <select id="num-pages" name="num_pages">
+                        <option value="50">Compact (50 Pages)</option>
+                        <option value="100">Standard (100 Pages)</option>
+                        <option value="150" selected>Comprehensive (150 Pages)</option>
+                        <option value="200">Extended (200 Pages)</option>
+                    </select>
+                </div>
+                <button type="submit" id="generate-btn">Generate My Blueprint</button>
+            </form>
+        </div>
         <div id="result-box" class="result"></div>
     </div>
+
     <script>
         const form = document.getElementById('book-form');
         const generateBtn = document.getElementById('generate-btn');
@@ -109,11 +181,18 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
-            const data = { user_prompt: formData.get('user_prompt'), num_pages: parseInt(formData.get('num_pages'), 10) };
+            const data = {
+                birth_date: formData.get('birth_date'),
+                birth_time: formData.get('birth_time'),
+                birth_location: formData.get('birth_location'),
+                num_pages: parseInt(formData.get('num_pages'), 10),
+            };
+            
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating... Please Wait (This can take several minutes)';
+            generateBtn.textContent = 'Weaving the Cosmos...';
             resultBox.className = 'result loading';
-            resultBox.textContent = 'Your request is being processed. The AI is writing and designing your personal book...';
+            resultBox.innerHTML = `Please wait. This can take several minutes as the AI writes and designs your personal book... <br><br> 🌌✨`;
+
             try {
                 const response = await fetch('/generate-book/', {
                     method: 'POST',
@@ -122,17 +201,17 @@
                 });
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                    throw new Error(errorData.detail || `An unknown error occurred (Status: ${response.status})`);
                 }
                 const result = await response.json();
                 resultBox.className = 'result success';
-                resultBox.innerHTML = `<strong>Success!</strong> Your book "${result.title}" is ready.<br><br><a href="${result.pdf_file}" target="_blank">Click here to download your PDF</a>`;
+                resultBox.innerHTML = `<strong>Success!</strong> Your cosmic portrait is ready.<br><br><a href="${result.pdf_file}" target="_blank">Click Here to Download Your PDF</a>`;
             } catch (error) {
                 resultBox.className = 'result error';
-                resultBox.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                resultBox.innerHTML = `<strong>An Error Occurred:</strong><br>${error.message}`;
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.textContent = 'Generate Book';
+                generateBtn.textContent = 'Generate My Blueprint';
             }
         });
     </script>

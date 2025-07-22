@@ -1,6 +1,7 @@
 # app/main.py
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse # <-- Added FileResponse for the frontend
+from fastapi.staticfiles import StaticFiles # <-- Added StaticFiles for PDF downloads
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from app.book_writer import generate_astrology_book
@@ -27,9 +28,14 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# NEW: Simplified BookRequest model
+# This is necessary for the frontend to be able to link to the generated PDF
+app.mount("/generated_books", StaticFiles(directory="generated_books"), name="generated_books")
+
+# <<<====== 1. UPDATE BookRequest to match the new form fields ======>>>
 class BookRequest(BaseModel):
-    user_prompt: str = Field(..., description="The user's birth information in a single sentence.", example="September 4, 1986, 3:30 PM, West Palm Beach, Florida")
+    birth_date: str = Field(..., description="The user's birth date, e.g., '1986-09-04'")
+    birth_time: str = Field(..., description="The user's birth time, e.g., '15:30'")
+    birth_location: str = Field(..., description="The user's birth location, e.g., 'West Palm Beach, Florida'")
     num_pages: int = Field(150, description="Desired book length: 50, 100, 150, or 200")
 
 def sanitize_filename(text: str) -> str:
@@ -37,7 +43,7 @@ def sanitize_filename(text: str) -> str:
     sanitized = re.sub(r'[\\/*?:"<>|]', "", text)
     return sanitized[:50].strip().replace(' ', '_')
 
-# NEW: AI-powered function to parse the user's text prompt
+# YOUR ORIGINAL FUNCTION - UNTOUCHED
 async def extract_birth_data_from_prompt(prompt: str) -> dict:
     """
     Uses an LLM to parse a natural language prompt into structured birth data,
@@ -68,23 +74,34 @@ async def extract_birth_data_from_prompt(prompt: str) -> dict:
         print(f"Failed to parse prompt with AI: {e}")
         raise ValueError("Could not understand the provided birth information. Please try again with a clear format like 'Month Day, Year, Time, City, State'.")
 
+# This function is needed to serve your index.html file
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    return FileResponse('index.html')
+
 
 @app.post("/generate-book/", summary="Generate a Personal Portrait Book")
 async def generate_book(request: BookRequest):
     """
     Generates a complete PDF book from a simple text prompt containing birth info.
     """
-    if not request.user_prompt:
-        raise HTTPException(status_code=400, detail="The user prompt cannot be empty.")
-        
-    if request.num_pages not in [30, 100, 150, 200]:
-        raise HTTPException(status_code=400, detail="Number of pages must be one of: 30, 100, 150, 200.")
+    # <<<====== 2. COMBINE the new fields into the single 'user_prompt' string your code expects ======>>>
+    # Check if any of the required fields are empty
+    if not all([request.birth_date, request.birth_time, request.birth_location]):
+        raise HTTPException(status_code=400, detail="Date, time, and location fields cannot be empty.")
+    
+    # Recreate the single prompt string
+    user_prompt = f"{request.birth_date} at {request.birth_time} in {request.birth_location}"
+    
+    # The rest of your code now works perfectly because it has the 'user_prompt' variable
+    if request.num_pages not in [50, 100, 150, 200]:
+        raise HTTPException(status_code=400, detail="Number of pages must be one of: 50, 100, 150, 200.")
 
-    print(f"--- Starting Book Generation for prompt: '{request.user_prompt}' ---")
+    print(f"--- Starting Book Generation for prompt: '{user_prompt}' ---")
 
     try:
-        # Step 1: Use the AI to parse the text prompt into structured data
-        birth_data = await extract_birth_data_from_prompt(request.user_prompt)
+        # Step 1: Use the AI to parse the text prompt into structured data (YOUR ORIGINAL LOGIC)
+        birth_data = await extract_birth_data_from_prompt(user_prompt)
 
         # Step 2: Fetch the detailed chart data using the parsed information
         print("Fetching chart data from AstrologyAPI...")
@@ -99,7 +116,6 @@ async def generate_book(request: BookRequest):
         )
         print("Book components generated successfully.")
 
-        # <<<====== 2. THESE TWO LINES ARE CHANGED/ADDED TO CREATE A UNIQUE FILENAME ======>>>
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{sanitize_filename(book_title)}_{timestamp}.pdf"
         print(f"Generating unique PDF: {filename}...")
@@ -118,7 +134,8 @@ async def generate_book(request: BookRequest):
         return {
             "title": book_title,
             "pdf_file": pdf_url,
-            "preview": book_data.get('introduction_text', '')[:1500] + "..."
+            # <<<====== 3. CORRECTED the key from 'introduction_text' to 'prologue_text' ======>>>
+            "preview": book_data.get('prologue_text', '')[:1500] + "..."
         }
 
     except Exception as e:
