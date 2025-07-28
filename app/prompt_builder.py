@@ -92,53 +92,30 @@ Based on the following summary of a personal interpretation, write a single, des
 Create a single-paragraph DALL-E prompt that captures the symbolic essence of this summary. Make it safe for all audiences and focus on visual metaphor.
 """
 
-def build_book_structure_prompt(natal_chart_json: dict, word_count_tier: str) -> str:
+def build_book_structure_prompt(natal_chart_json: dict, num_chapters: int) -> str:
     """
     Builds a prompt for an expert-level AI to analyze a natal chart and propose
-    a book structure based on its core psychological dynamics.
+    a book structure with a specific number of chapters.
     """
     return f"""
 You are a master psychological interpreter and book architect. Your task is to analyze the provided symbolic data (a natal chart) and design a thematic structure for a deeply personal book.
 
 **CRITICAL INSTRUCTIONS:**
-1.  **Analyze Holistically:** Do not simply list placements. Instead, identify the most significant psychological patterns, energetic tensions, and core narratives. Look for:
-    - Concentrated areas of activity (e.g., multiple points in one area suggesting a major life focus).
-    - Internal tensions and motivational conflicts (e.g., data points suggesting a clash between security and freedom, or between intellect and emotion).
-    - Emotional polarities (e.g., opposing emotional needs).
-    - The subject's likely communication strategy (their natural tone, cognitive structure, emotional access points).
-2.  **Define Thematic Chapters:** Based on your analysis, create a series of chapter themes. Each chapter should represent a core dynamic of the person's inner world.
+1.  **Analyze Holistically:** Do not simply list placements. Instead, identify the most significant and distinct psychological patterns, energetic tensions, and core narratives.
+2.  **Generate Exact Chapter Count:** Your primary goal is to generate **exactly {num_chapters}** distinct, meaningful chapter themes. You MUST NOT generate more or fewer than this number.
 3.  **No Jargon:** Your output themes and summaries MUST NOT contain any astrological jargon (planets, signs, houses, aspects, etc.). Translate everything into psychological and experiential language.
-4.  **Adhere to Depth:** The number and complexity of your themes should match the requested book depth: '{word_count_tier}'.
-    - **Core Dynamics (~15k words):** 3-4 major, foundational themes.
-    - **Primary & Secondary Themes (~30k words):** 5-6 themes, including core dynamics and significant internal contradictions or secondary life patterns.
-    - **Full Arc (~50k+ words):** 7-8+ themes, covering the full arc from core wounds and shadow aspects to pathways for transformation and potential.
-5.  **Output JSON:** Return ONLY a JSON object with a single key "chapters", which is a list of chapter objects. Each chapter object must have these keys:
-    - "theme_title": An evocative, insightful title for the chapter (e.g., "The Tug-of-War Between Your Heart and Your Mind," "The Architect of Your Own Security," "The Search for a Truth That Feels Like Home").
+4.  **Output JSON:** Return ONLY a JSON object with a single key "chapters". This key must contain a list of **exactly {num_chapters}** chapter objects. Each chapter object must have these keys:
+    - "theme_title": An evocative, insightful title for the chapter.
     - "summary": A 1-2 sentence summary of the psychological dynamic this chapter will explore.
-    - "keywords": A list of 5-7 keywords that capture the essence of this theme (e.g., "responsibility, structure, emotional discipline, achievement, legacy").
+    - "keywords": A list of 5-7 keywords that capture the essence of this theme.
 
 **SYMBOLIC DATA TO ANALYZE:**
 ---
 {json.dumps(natal_chart_json, indent=2)}
 ---
 
-**EXAMPLE JSON OUTPUT STRUCTURE:**
-{{
-  "chapters": [
-    {{
-      "theme_title": "The Deep Current of Your Emotional World",
-      "summary": "This chapter explores the foundational nature of your emotional security, which is built on privacy, intuitive depth, and a powerful, almost psychic connection to your past and heritage.",
-      "keywords": ["intuition", "privacy", "security", "heritage", "empathy", "vulnerability"]
-    }},
-    {{
-      "theme_title": "The Arena of Action: Where Drive Meets Structure",
-      "summary": "This chapter examines the inherent tension between your assertive, ambitious drive and a deep-seated need for discipline and long-term planning, a conflict that can be the source of immense achievement.",
-      "keywords": ["ambition", "discipline", "conflict", "strategy", "patience", "achievement"]
-    }}
-  ]
-}}
+**REMINDER: You must return exactly {num_chapters} chapters in your JSON response.**
 """
-
 
 # ==============================================================================
 # PROMPT 2: THE WRITER - Writes a single, dynamically-defined chapter

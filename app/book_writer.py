@@ -83,37 +83,37 @@ async def generate_astrology_book(natal_chart_json: dict, target_word_count: int
     """
     print("\n--- STAGE 1: ARCHITECTING THE BOOK STRUCTURE ---")
     
-    # Determine the word count tier for the Architect prompt
+    # --- NEW: LOGIC TO DETERMINE EXACT CHAPTER COUNT ---
+    # This logic ensures the number of chapters scales correctly with the word count.
     if target_word_count <= 20000:
-        word_count_tier = "Core Dynamics (~15k words)"
+        num_chapters = 4  # 15k words = 4 chapters
     elif target_word_count <= 40000:
-        word_count_tier = "Primary & Secondary Themes (~30k words)"
+        num_chapters = 8  # 30k words = 8 chapters
     else:
-        word_count_tier = "Full Arc (~50k+ words)"
+        num_chapters = 12 # 50k words = 12 chapters
         
-    print(f"Targeting {word_count_tier} for a ~{target_word_count} word book.")
+    print(f"Targeting {num_chapters} chapters for a ~{target_word_count} word book.")
 
-    # 1. Call the Architect AI to get the book's structure
-    structure_prompt = build_book_structure_prompt(natal_chart_json, word_count_tier)
+    # Call the Architect AI with the specific number of chapters required
+    structure_prompt = build_book_structure_prompt(natal_chart_json, num_chapters)
     structure_response = await openai.chat.completions.create(
         model=MODEL_TEXT,
         messages=[{"role": "user", "content": structure_prompt}],
         response_format={"type": "json_object"},
-        temperature=0.2
+        temperature=0.3 # Slightly more creative to find distinct themes
     )
     book_structure = json.loads(structure_response.choices[0].message.content)
     dynamic_chapters = book_structure.get("chapters", [])
 
-    if not dynamic_chapters:
-        raise ValueError("The AI Architect failed to generate a book structure.")
+    if not dynamic_chapters or len(dynamic_chapters) != num_chapters:
+        raise ValueError(f"The AI Architect failed to generate the required {num_chapters} chapters. It returned {len(dynamic_chapters)}.")
         
     print(f"--- Book structure defined with {len(dynamic_chapters)} thematic chapters. ---")
     for i, chap in enumerate(dynamic_chapters):
         print(f"  Chapter {i+1}: {chap['theme_title']}")
 
-    # 2. Allocate word counts and generate content for each dynamic chapter
-    # Simple allocation for now. Can be made more sophisticated later.
-    words_per_chapter = int(target_word_count / len(dynamic_chapters))
+    # Calculate word count per chapter based on the new, correct chapter count
+    words_per_chapter = int(target_word_count / num_chapters)
     
     chapters_data = []
     print("\n--- STAGE 2: WRITING THE CHAPTERS ---")
@@ -121,30 +121,28 @@ async def generate_astrology_book(natal_chart_json: dict, target_word_count: int
         section_title = chapter_details["theme_title"]
         print(f"\n[Generating Content for Chapter {i+1}: {section_title}]")
         
-        # Build the specific prompt for this chapter
         chapter_prompt = build_dynamic_chapter_prompt(chapter_details, natal_chart_json, words_per_chapter)
-        
-        # Generate the chapter text
         section_text = await generate_content_block(chapter_prompt)
         
-        # Generate the summary and image for the chapter
         image_summary = await summarize_section(section_text)
         image_path = await generate_chapter_image(image_summary)
         
         chapters_data.append({"heading": section_title, "content": section_text, "image_path": image_path})
-        await asyncio.sleep(5) # Rate limiting
+        await asyncio.sleep(5)
 
-    # 3. Generate static Preface/Intro/Outro (optional, but good for framing)
-    # You can keep these or remove them for a purely analytical book.
+    # print("\n--- Generating Main Cover Image ---")
+    # main_cover_image_summary = await summarize_section(chapters_data[0]['content'])
+    # main_cover_image_path = await generate_chapter_image(f"A symbolic book cover representing the theme: {main_cover_image_summary}")
+
     preface_text = """What you hold in your hands is not a book of predictions, but a mirror. It reflects the intricate, invisible architecture of your inner world, drawn from a single, powerful moment in time: your beginning. The following chapters are not a breakdown of cosmic mechanics, but an exploration of the core themes, tensions, and potentials that make you who you are. This is a journey into the 'why' behind your drives, the 'how' of your connections, and the 'what' of your unique purpose. May it serve as a guide to deeper self-understanding and a celebration of the complex, beautiful story that is you."""
     intro_text = "Before we delve into the specific themes of your personal narrative, let us first set the stage. This introduction serves as an overture, touching upon the overarching energetic signature of your being—the fundamental rhythm to which your life tends to move. It is the backdrop against which all the individual stories, conflicts, and triumphs detailed in the coming chapters will unfold."
-    outro_text = "The journey through these pages has been a journey inward. We have explored the foundational pillars of your being, navigated the currents of your internal conflicts, and illuminated the pathways of your greatest potential. This book is a snapshot, a single interpretation of a vast and dynamic inner landscape. The map is not the territory. The ultimate author of your story is, and always will be, you. May you walk forward with a renewed sense of clarity, self-compassion, and purpose."
+    outro_text = "The journey through these pages has been a journey inward. We have explored the foundational pillars of your being, navigated the currents of your internal conflicts, and illuminated the pathways of your greatest potential. This book is now a map you hold, but the territory is yours to explore. The ultimate author of your story is, and always will be, you. May you walk forward with a renewed sense of clarity, self-compassion, and purpose."
 
     return {
         "swapi_call_text": "Symbolic data based on birth details.",
         "swapi_json_output": json.dumps(natal_chart_json, indent=4),
         "preface_text": preface_text,
-        "prologue_text": intro_text, # Using "prologue" for the introduction
-        "epilogue_text": outro_text, # Using "epilogue" for the conclusion
+        "prologue_text": intro_text,
+        "epilogue_text": outro_text,
         "chapters": chapters_data,
     }
