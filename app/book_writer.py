@@ -8,8 +8,9 @@ import random
 import string
 import httpx
 from app.prompt_builder import (
-    build_book_structure_prompt, # <-- NEW
-    build_dynamic_chapter_prompt, # <-- NEW
+    build_book_structure_prompt,
+    build_prologue_prompt, # <-- ADDED
+    build_dynamic_chapter_prompt,
     build_summarization_prompt,
     build_safe_image_prompt_generation_prompt
 )
@@ -86,7 +87,7 @@ async def generate_astrology_book(natal_chart_json: dict, target_word_count: int
     # --- NEW: LOGIC TO DETERMINE EXACT CHAPTER COUNT ---
     # This logic ensures the number of chapters scales correctly with the word count.
     if target_word_count <= 20000:
-        num_chapters = 4  # 15k words = 4 chapters
+        num_chapters = 1  # 15k words = 4 chapters
     elif target_word_count <= 40000:
         num_chapters = 8  # 30k words = 8 chapters
     else:
@@ -130,17 +131,26 @@ async def generate_astrology_book(natal_chart_json: dict, target_word_count: int
         chapters_data.append({"heading": section_title, "content": section_text, "image_path": image_path})
         await asyncio.sleep(5)
 
-    # print("\n--- Generating Main Cover Image ---")
-    # main_cover_image_summary = await summarize_section(chapters_data[0]['content'])
-    # main_cover_image_path = await generate_chapter_image(f"A symbolic book cover representing the theme: {main_cover_image_summary}")
-
+    print("\n--- STAGE 3: GENERATING INTRODUCTORY AND CONCLUDING TEXTS ---")
+    
     preface_text = """What you hold in your hands is not a book of predictions, but a mirror. It reflects the intricate, invisible architecture of your inner world, drawn from a single, powerful moment in time: your beginning. The following chapters are not a breakdown of cosmic mechanics, but an exploration of the core themes, tensions, and potentials that make you who you are. This is a journey into the 'why' behind your drives, the 'how' of your connections, and the 'what' of your unique purpose. May it serve as a guide to deeper self-understanding and a celebration of the complex, beautiful story that is you."""
-    intro_text = "Before we delve into the specific themes of your personal narrative, let us first set the stage. This introduction serves as an overture, touching upon the overarching energetic signature of your being—the fundamental rhythm to which your life tends to move. It is the backdrop against which all the individual stories, conflicts, and triumphs detailed in the coming chapters will unfold."
+    
+    print("  - Generating dynamic prologue...")
+    prologue_prompt = build_prologue_prompt(natal_chart_json)
+    try:
+        prologue_response = await openai.chat.completions.create(
+            model=MODEL_TEXT, messages=[{"role": "user", "content": prologue_prompt}], temperature=0.7
+        )
+        intro_text = prologue_response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"    - Could not generate dynamic prologue, using fallback. Error: {e}")
+        intro_text = "Before we delve into the specific themes of your personal narrative, let us first set the stage. This introduction serves as an overture, touching upon the overarching energetic signature of your being—the fundamental rhythm to which your life tends to move. It is the backdrop against which all the individual stories, conflicts, and triumphs detailed in the coming chapters will unfold. It is a promise of the journey to come, a journey not of prediction, but of profound self-recognition. We will explore the currents that shape your desires, a look into the foundations of your emotional world, and an acknowledgment of the unique challenges that forge your strength. This is more than an analysis; it is an invitation to see yourself more clearly, to understand the intricate patterns that make you who you are, and to embrace the full spectrum of your potential. Let us begin."
+    
     outro_text = "The journey through these pages has been a journey inward. We have explored the foundational pillars of your being, navigated the currents of your internal conflicts, and illuminated the pathways of your greatest potential. This book is now a map you hold, but the territory is yours to explore. The ultimate author of your story is, and always will be, you. May you walk forward with a renewed sense of clarity, self-compassion, and purpose."
 
     return {
         "swapi_call_text": "Symbolic data based on birth details.",
-        "swapi_json_output": json.dumps(natal_chart_json, indent=4),
+        "swapi_json_output": json.dumps( natal_chart_json, indent=4),
         "preface_text": preface_text,
         "prologue_text": intro_text,
         "epilogue_text": outro_text,

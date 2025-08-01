@@ -80,16 +80,15 @@ def build_safe_image_prompt_generation_prompt(section_summary: str) -> str:
 Based on the following summary of a personal interpretation, write a single, descriptive paragraph for an AI image generator (like DALL-E 3).
 
 **CRITICAL INSTRUCTIONS:**
-- The prompt must be symbolic, artistic, and abstract.
-- Focus on archetypal themes, natural elements, and cosmic energy.
-- Do NOT depict specific, recognizable human figures. Use archetypal descriptions like "a veiled feminine figure made of starlight," "a powerful craftsman forging a sword from a fallen star," or "a seeker looking out over a vast, otherworldly landscape."
+- The prompt must be symbolic, artistic, and abstract. It should focus on archetypal themes, natural elements, cosmic energy, and intricate patterns.
+- **CRITICAL: Absolutely no human or humanoid figures, not even as silhouettes or archetypes.** The image must be entirely abstract or focused on landscapes, cosmic phenomena, animals, or symbolic objects. Avoid anything that resembles a face, body, or human form.
 - The mood should be mystical, elegant, and awe-inspiring.
 - The style should be "A beautiful and evocative digital painting with rich, deep colors and ethereal light, in a vertical 1024x1792 aspect ratio."
 
 **Interpretation Summary:** "{section_summary}"
 
-**Your Task:**  
-Create a single-paragraph DALL-E prompt that captures the symbolic essence of this summary. Make it safe for all audiences and focus on visual metaphor.
+**Your Task:**
+Create a single-paragraph DALL-E prompt that captures the symbolic essence of this summary. It must be safe for all audiences, focus on visual metaphor, and strictly adhere to the no-human-figures rule.
 """
 
 def build_book_structure_prompt(natal_chart_json: dict, num_chapters: int) -> str:
@@ -115,6 +114,28 @@ You are a master psychological interpreter and book architect. Your task is to a
 ---
 
 **REMINDER: You must return exactly {num_chapters} chapters in your JSON response.**
+"""
+
+def build_prologue_prompt(natal_chart_json: dict) -> str:
+    """Builds a prompt to generate a ~400 word prologue for the book."""
+    return f"""
+You are an eloquent and insightful writer, crafting the prologue for a deeply personal book.
+Your task is to write an introduction that sets the stage for a journey into self-discovery, based on the symbolic data provided.
+
+**CRITICAL INSTRUCTIONS:**
+- The tone should be warm, inviting, and slightly mystical, like an overture to a grand story.
+- DO NOT reveal any specific details or interpretations from the data. The goal is to create anticipation and explain the book's purpose: to be a mirror, not a prediction.
+- Write in a beautiful, flowing, second-person narrative ("You are about to embark...", "This book is a map...").
+- **Absolutely NO astrological jargon.** Do not mention planets, signs, houses, etc.
+- Aim for a word count of approximately 400 words. This length is important to ensure the text flows correctly across a page break.
+
+**SYMBOLIC DATA (for thematic inspiration only):**
+---
+{json.dumps(natal_chart_json, indent=2)}
+---
+
+YOUR TASK:
+Write the full text for the book's prologue. Begin writing directly.
 """
 
 # ==============================================================================
@@ -158,24 +179,6 @@ TEXT TO SUMMARIZE:
 ---
 {section_text}
 ---
-"""
-
-def build_safe_image_prompt_generation_prompt(section_summary: str) -> str:
-    """Asks the LLM to generate a safe, symbolic, and artistic prompt for DALL-E."""
-    return f"""
-Based on the following summary of a personal interpretation, write a single, descriptive paragraph for an AI image generator (like DALL-E 3).
-
-**CRITICAL INSTRUCTIONS:**
-- The prompt must be symbolic, artistic, and abstract.
-- Focus on archetypal themes, natural elements, and cosmic energy.
-- Do NOT depict specific, recognizable human figures. Use archetypal descriptions like "a veiled feminine figure made of starlight," "a powerful craftsman forging a sword from a fallen star," or "a seeker looking out over a vast, otherworldly landscape."
-- The mood should be mystical, elegant, and awe-inspiring.
-- The style should be "A beautiful and evocative digital painting with rich, deep colors and ethereal light, in a vertical 1024x1792 aspect ratio."
-
-**Interpretation Summary:** "{section_summary}"
-
-**Your Task:**
-Create a single-paragraph DALL-E prompt that captures the symbolic essence of this summary. Make it safe for all audiences and focus on visual metaphor.
 """
 
 # Note: build_data_extraction_prompt remains unchanged.
