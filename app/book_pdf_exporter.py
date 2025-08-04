@@ -27,9 +27,8 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         epilogue_title = book_data.get('epilogue_title', "Epilogue")
         all_sections_for_toc.append({"title": epilogue_title, "href": "#epilogue"})
 
-    # --- Define HTML Template and CSS ---
-    # The template uses a `page_map` variable. It will be empty on the first pass
-    # and populated with page numbers on the second pass.
+    # <<< THE ORIGINAL, CORRECT HTML TEMPLATE IS RESTORED >>>
+    # Only the Table of Contents section is modified for the two-pass render.
     html_template = Template("""
     <!DOCTYPE html>
     <html>
@@ -64,7 +63,25 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         <div class="main-content-body">
             {% if preface_text %}<div class="page content-page" id="preface"><h2>Preface</h2><div class="content-block">{% for p in preface_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div><div class="page blank-page"></div>{% endif %}
             {% if prologue_text %}<div class="page content-page" id="prologue"><h2>{{ prologue_title | default('Prologue') }}</h2><div class="content-block">{% for p in prologue_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div><div class="page blank-page"></div>{% endif %}
-            {% for chapter in chapters %}<div class="page chapter-title-page"><div class="chapter-title-content"><span class="chapter-number">Chapter {{ loop.index }}</span><h2>{{ chapter.heading }}</h2></div></div>{% if chapter.image_path %}<div class="page image-page"><div class="image-container"><img src="{{ chapter.image_path }}" alt="Image for Chapter {{ loop.index }}"></div></div>{% endif %}<div class="page content-page" id="chapter-{{ loop.index }}"><div class="content-block">{% for p in chapter.content.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div>{% endfor %} 
+            
+            {# THIS IS THE ORIGINAL, CORRECT CHAPTER LAYOUT #}
+            {% for chapter in chapters %}
+                <div class="page chapter-title-page">
+                    <div class="chapter-title-content">
+                        <span class="chapter-number">Chapter {{ loop.index }}</span>
+                        <h2>{{ chapter.heading }}</h2>
+                    </div>
+                </div>
+                {% if chapter.image_path %}
+                    <div class="page image-page"><div class="image-container"><img src="{{ chapter.image_path }}" alt="Image for Chapter {{ loop.index }}"></div></div>
+                {% endif %}
+                <div class="page content-page" id="chapter-{{ loop.index }}">
+                    <div class="content-block">
+                        {% for p in chapter.content.split('\n\n') %}<p>{{ p }}</p>{% endfor %}
+                    </div>
+                </div>
+            {% endfor %} 
+            
             {% if epilogue_text %}<div class="page blank-page"></div><div class="page content-page" id="epilogue"><h2>{{ epilogue_title | default('Epilogue') }}</h2><div class="content-block">{% for p in epilogue_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div>{% endif %}
         </div>
     </body>
@@ -77,6 +94,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     baskerville_bold_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Bold.ttf'))).as_uri()
     font_config = f"""@font-face{{font-family:'Baskerville';src:url('{baskerville_regular_uri}');}}@font-face{{font-family:'Baskerville';font-style:italic;src:url('{baskerville_italic_uri}');}}@font-face{{font-family:'Baskerville';font-weight:bold;src:url('{baskerville_bold_uri}');}}"""
 
+    # This CSS is also correct and preserves your original layout
     main_css_string = """
     @page { size: 140mm 216mm; margin: 25mm; }
     @page:blank { @bottom-center { content: ""; } }
@@ -107,6 +125,8 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     .print-date-page p { text-align: center; font-style: italic; font-size: 10pt; }
     .chapter-title-content { text-align: center; padding: 2em; }
     .chapter-number { display: block; font-size: 16pt; font-style: italic; color: #666; margin-bottom: 1.5em; text-transform: uppercase; }
+    .chapter-title-content h2 { font-size: 32pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.3; }
+    .content-page { padding: 0; }
     .content-page h2 { font-size: 20pt; text-transform: uppercase; margin-bottom: 2.5em; letter-spacing: 0.1em; }
     .content-block { margin: 0 auto; max-width: 100%; }
     .content-block p { text-align: justify; text-indent: 2em; margin-bottom: 0; line-height: 1.7; hyphens: auto; }
@@ -119,7 +139,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
 
     # --- PASS 1: Render a draft to find the real page number of each anchor ---
     print("--- Starting Pass 1: Finding page numbers... ---")
-    draft_context = {"page_map": None, "toc_entries": all_sections_for_toc, **book_data, "title": title}
+    draft_context = {"page_map": None, "toc_entries": all_sections_for_toc, **book_data, "book_title": title, "print_date": datetime.now().strftime("%B %d, %Y")}
     draft_html = html_template.render(draft_context)
     doc = HTML(string=draft_html, base_url=base_url).render(stylesheets=[css])
     
@@ -140,10 +160,6 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
             real_page_number = (p - first_content_page_index) + 1
             for anchor_name in page.anchors:
                 href = f'#{anchor_name}'
-                # <<< THE FIX IS HERE >>>
-                # Only add the anchor to the map if it's one we care about
-                # AND if we haven't already recorded it. This prevents overwriting
-                # the starting page number with the ending page number.
                 if anchor_name in target_anchors and href not in page_map:
                     page_map[href] = real_page_number
     
@@ -151,7 +167,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
 
     # --- PASS 2: Render the final PDF, injecting the correct page numbers into the TOC ---
     print("--- Starting Pass 2: Rendering final PDF... ---")
-    final_context = {"page_map": page_map, "toc_entries": all_sections_for_toc, **book_data, "title": title}
+    final_context = {"page_map": page_map, "toc_entries": all_sections_for_toc, **book_data, "book_title": title, "print_date": datetime.now().strftime("%B %d, %Y")}
     final_html = html_template.render(final_context)
     HTML(string=final_html, base_url=base_url).write_pdf(output_path, stylesheets=[css])
     

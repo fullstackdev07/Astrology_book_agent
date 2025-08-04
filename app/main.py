@@ -37,7 +37,7 @@ class BookRequest(BaseModel):
     birth_time: str = Field(..., description="The user's birth time, e.g., '15:30'")
     birth_location: str = Field(..., description="The user's birth location, e.g., 'West Palm Beach, Florida'")
     # UPDATED FIELD:
-    target_word_count: int = Field(5000, description="Desired book length: 5000, 30000, or 50000")
+    target_word_count: int = Field(15000, description="Desired book length: 15000, 30000, or 50000")
 
 def sanitize_filename(text: str) -> str:
     """Removes invalid characters from a string to make it a valid filename."""
@@ -92,8 +92,8 @@ async def generate_book(request: BookRequest):
     user_prompt = f"{request.birth_date} at {request.birth_time} in {request.birth_location}"
     
     # <<<====== 2. VALIDATE the new word count field ======>>>
-    if request.target_word_count not in [5000, 30000, 50000]:
-        raise HTTPException(status_code=400, detail="Word count must be one of: 5000, 30000, 50000.")
+    if request.target_word_count not in [15000, 30000, 50000]:
+        raise HTTPException(status_code=400, detail="Word count must be one of: 15000, 30000, 50000.")
 
     print(f"--- Starting Book Generation for prompt: '{user_prompt}' ---")
 

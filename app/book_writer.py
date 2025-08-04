@@ -86,7 +86,7 @@ async def generate_astrology_book(natal_chart_json: dict, target_word_count: int
     # --- NEW: LOGIC TO DETERMINE EXACT CHAPTER COUNT ---
     # This logic ensures the number of chapters scales correctly with the word count.
     if target_word_count <= 20000:
-        num_chapters = 1  # 15k words = 4 chapters
+        num_chapters = 4  # 15k words = 4 chapters
     elif target_word_count <= 40000:
         num_chapters = 8  # 30k words = 8 chapters
     else:
