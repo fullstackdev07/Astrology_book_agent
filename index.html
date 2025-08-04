@@ -15,81 +15,117 @@
             --color-dark-purple: #1a1a2e;
             --color-light-text: #e0e0e0;
         }
-        
-        /* --- FIX: Styles for a non-scrolling, centered layout --- */
-        html, body {
-            height: 100vh; /* Use viewport height to ensure it fits the screen */
-            margin: 0;
-            overflow: hidden; /* This explicitly prevents scrolling */
+
+        html {
+            height: 100%;
         }
 
         body {
             font-family: var(--font-body);
-            background: url('https://images.pexels.com/photos/110854/pexels-photo-110854.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2') no-repeat center center fixed;
-            background-size: cover;
+            background-color: #0c0a18;
             color: var(--color-light-text);
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 1rem;
             box-sizing: border-box;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden; 
         }
-        /* --- END OF FIX --- */
+
+        #stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 200%;
+            background-image: 
+                radial-gradient(ellipse at top, transparent 0%, var(--color-dark-purple)),
+                url('https://www.transparenttextures.com/patterns/stardust.png');
+            background-repeat: repeat;
+            z-index: -1;
+            animation: move-stars 50s linear infinite;
+        }
+
+        @keyframes move-stars {
+            from { transform: translateY(0); }
+            to { transform: translateY(-50%); }
+        }
 
         .container {
             width: 100%;
             max-width: 550px;
             text-align: center;
+            z-index: 1;
         }
+        
         .form-container {
             background: rgba(26, 26, 46, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-image: linear-gradient(to bottom right, #b8860b, #ffd700) 1;
             border-radius: 16px;
             /* FIX: Reduced vertical padding */
-            padding: 2rem 2.5rem;
+            padding: 2rem 2.5rem; 
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
+        
         h1 {
             font-family: var(--font-heading);
             font-weight: 700;
             /* FIX: Slightly smaller font size */
-            font-size: 2.2rem;
+            font-size: 2.2rem; 
+            letter-spacing: 2px;
             color: #fff;
             margin: 0 0 0.5rem 0;
             text-shadow: 0 0 15px var(--color-gold);
         }
-        p {
+        
+        p.subtitle {
             font-weight: 300;
             /* FIX: Reduced margin-bottom */
             margin-bottom: 1.5rem;
             opacity: 0.9;
         }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--color-gold);
+            /* FIX: Reduced margin-bottom */
+            margin: 0rem 0 1.5rem 0;
+            opacity: 0.5;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; border-bottom: 1px solid var(--color-gold);
+        }
+        .divider:not(:empty)::before { margin-right: .25em; }
+        .divider:not(:empty)::after { margin-left: .25em; }
+        
         .form-row {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             /* FIX: Reduced margin-bottom */
             margin-bottom: 1.2rem;
         }
-        .form-group {
-            flex: 1;
-            text-align: left;
-        }
-        .form-group.full-width {
-            flex-basis: 100%;
-            /* FIX: Reduced margin-bottom */
-            margin-bottom: 1.2rem;
-        }
+        
+        .form-group { flex: 1; text-align: left; }
+        .form-group.full-width { flex-basis: 100%; margin-bottom: 1.2rem; }
+        
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem; /* FIX: Reduced margin */
             font-weight: 400;
             opacity: 0.9;
         }
+        
         input, select {
             width: 100%;
-            padding: 0.8rem 1rem;
+            /* FIX: Reduced padding */
+            padding: 0.7rem 1rem;
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             font-size: 1rem;
@@ -97,8 +133,15 @@
             background-color: rgba(0, 0, 0, 0.3);
             color: var(--color-light-text);
             font-family: var(--font-body);
+            transition: all 0.2s ease-in-out;
         }
+
+        input:focus, select:focus {
+            outline: none; border-color: var(--color-gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
         input::placeholder { color: rgba(224, 224, 224, 0.5); }
+        
         select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffd700' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
@@ -106,9 +149,10 @@
             background-position: right 1rem center;
             background-size: 1em;
         }
+        
         button {
             width: 100%;
-            padding: 1rem;
+            padding: 0.8rem; /* FIX: Reduced padding */
             border: none;
             border-radius: 8px;
             background: linear-gradient(45deg, #FFC800, #FFD700, #FFE66D);
@@ -120,30 +164,50 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            margin-top: 0.75rem; /* FIX: Reduced margin */
         }
+        
         button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 0 30px rgba(255, 215, 0, 0.7); }
-        button:disabled { background: #555; color: #999; cursor: not-allowed; box-shadow: none; }
+        button:disabled { background: #555; color: #999; cursor: not-allowed; box-shadow: none; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        
         .result {
             /* FIX: Reduced margin-top */
             margin-top: 1.5rem;
-            padding: 1rem;
+            padding: 1.5rem;
             border-radius: 8px;
             display: none;
-            background: rgba(26, 26, 46, 0.7);
+            background: rgba(26, 26, 46, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            line-height: 1.6;
         }
-        .result.loading { display: block; }
-        .result.success { display: block; border-color: var(--color-gold); }
-        .result.error { display: block; border-color: #ff4d4d; color: #ffaeae; }
+        
+        .result.loading, .result.success, .result.error { display: block; }
+        .result.success { border-color: var(--color-gold); }
+        .result.error { border-color: #ff4d4d; color: #ffaeae; }
         .result a { color: var(--color-gold); font-weight: bold; text-decoration: none; }
         .result a:hover { text-decoration: underline; }
+
+        /* FIX: Responsive rule for shorter screens (like laptops) */
+        @media (max-height: 800px) {
+            .form-container { padding: 1.5rem 2rem; }
+            h1 { font-size: 2rem; }
+            p.subtitle, .divider { margin-bottom: 1rem; }
+            .form-row, .form-group.full-width { margin-bottom: 1rem; }
+            input, select { padding: 0.6rem 1rem; }
+            button { padding: 0.7rem; }
+            .result { margin-top: 1rem; }
+        }
     </style>
 </head>
 <body>
+    <div id="stars-container"></div>
     <div class="container">
         <div class="form-container">
             <h1>Your Cosmic Blueprint</h1>
-            <p>Enter your birth details to generate a personalized interpretation of your soul's journey.</p>
+            <p class="subtitle">Enter your birth details to generate a personalized interpretation of your soul's journey.</p>
+            <div class="divider">✧</div>
             <form id="book-form">
                 <div class="form-row">
                     <div class="form-group">
@@ -157,17 +221,18 @@
                 </div>
                 <div class="form-group full-width">
                     <label for="birth-location">Birth Location</label>
-                    <input type="text" id="birth-location" name="birth_location" placeholder="e.g., City, State/Country" required>
+                    <input type="text" id="birth-location" name="birth_location" placeholder="e.g., Chicago, Illinois" required>
                 </div>
+                
                 <div class="form-group full-width">
-                    <label for="num-pages">Desired Book Length</label>
-                    <select id="num-pages" name="num_pages">
-                        <option value="50">Compact (50 Pages)</option>
-                        <option value="100">Standard (100 Pages)</option>
-                        <option value="150" selected>Comprehensive (150 Pages)</option>
-                        <option value="200">Extended (200 Pages)</option>
+                    <label for="target-word-count">Desired Book Length</label>
+                    <select id="target-word-count" name="target_word_count">
+                        <option value="5000">Short Story (~15000 Words)</option>
+                        <option value="30000" selected>Novella (~30000 Words)</option>
+                        <option value="50000">Epic Tome (~50000 Words)</option>
                     </select>
                 </div>
+
                 <button type="submit" id="generate-btn">Generate My Blueprint</button>
             </form>
         </div>
@@ -178,14 +243,16 @@
         const form = document.getElementById('book-form');
         const generateBtn = document.getElementById('generate-btn');
         const resultBox = document.getElementById('result-box');
+        
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
+            
             const data = {
                 birth_date: formData.get('birth_date'),
                 birth_time: formData.get('birth_time'),
                 birth_location: formData.get('birth_location'),
-                num_pages: parseInt(formData.get('num_pages'), 10),
+                target_word_count: parseInt(formData.get('target_word_count'), 10),
             };
             
             generateBtn.disabled = true;
@@ -199,13 +266,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || `An unknown error occurred (Status: ${response.status})`);
                 }
+                
                 const result = await response.json();
                 resultBox.className = 'result success';
                 resultBox.innerHTML = `<strong>Success!</strong> Your cosmic portrait is ready.<br><br><a href="${result.pdf_file}" target="_blank">Click Here to Download Your PDF</a>`;
+
             } catch (error) {
                 resultBox.className = 'result error';
                 resultBox.innerHTML = `<strong>An Error Occurred:</strong><br>${error.message}`;

@@ -27,17 +27,12 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         epilogue_title = book_data.get('epilogue_title', "Epilogue")
         all_sections_for_toc.append({"title": epilogue_title, "href": "#epilogue"})
 
-    # <<< THE ORIGINAL, CORRECT HTML TEMPLATE IS RESTORED >>>
-    # Only the Table of Contents section is modified for the two-pass render.
+    # This HTML template is correct and preserves the layout.
     html_template = Template("""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8"><title>{{ book_title }}</title>
-        <style>
-            .toc-page h1 { font-size: 24pt !important; margin-bottom: 1.2em !important; }
-            .toc-entry { font-size: 10pt !important; line-height: 1.3 !important; margin-bottom: 1.0em !important; }
-        </style>
     </head>
     <body>
         <div class="page swapi-call-page debug-page"><h1>Data Source</h1><pre class="swapi-text">{{ swapi_call_text }}</pre></div>
@@ -63,8 +58,6 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         <div class="main-content-body">
             {% if preface_text %}<div class="page content-page" id="preface"><h2>Preface</h2><div class="content-block">{% for p in preface_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div><div class="page blank-page"></div>{% endif %}
             {% if prologue_text %}<div class="page content-page" id="prologue"><h2>{{ prologue_title | default('Prologue') }}</h2><div class="content-block">{% for p in prologue_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div><div class="page blank-page"></div>{% endif %}
-            
-            {# THIS IS THE ORIGINAL, CORRECT CHAPTER LAYOUT #}
             {% for chapter in chapters %}
                 <div class="page chapter-title-page">
                     <div class="chapter-title-content">
@@ -81,7 +74,6 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
                     </div>
                 </div>
             {% endfor %} 
-            
             {% if epilogue_text %}<div class="page blank-page"></div><div class="page content-page" id="epilogue"><h2>{{ epilogue_title | default('Epilogue') }}</h2><div class="content-block">{% for p in epilogue_text.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div></div>{% endif %}
         </div>
     </body>
@@ -94,7 +86,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     baskerville_bold_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Bold.ttf'))).as_uri()
     font_config = f"""@font-face{{font-family:'Baskerville';src:url('{baskerville_regular_uri}');}}@font-face{{font-family:'Baskerville';font-style:italic;src:url('{baskerville_italic_uri}');}}@font-face{{font-family:'Baskerville';font-weight:bold;src:url('{baskerville_bold_uri}');}}"""
 
-    # This CSS is also correct and preserves your original layout
+    # <<< CSS IS MODIFIED HERE TO MAKE THE TOC MORE COMPACT >>>
     main_css_string = """
     @page { size: 140mm 216mm; margin: 25mm; }
     @page:blank { @bottom-center { content: ""; } }
@@ -107,13 +99,28 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     body > div:last-of-type { page-break-after: auto; }
     h1, h2, h3 { font-weight: bold; margin: 0; text-align: center; }
     .main-content-body > .page { page: numbered; }
+    
+    /* --- Table of Contents Styling --- */
     .toc-page { padding: 2em 0; }
+    .toc-page h1 { font-size: 24pt; margin-bottom: 1.2em; }
     .toc-list { width: 85%; margin: 0 auto; }
-    .toc-entry { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 0 0.7em; }
+    
+    .toc-entry { 
+        display: grid; 
+        grid-template-columns: auto 1fr auto; 
+        align-items: end; 
+        gap: 0 0.7em;
+        font-size: 8pt;
+        line-height: 1.25;      /* TIGHTENED line height */
+        margin-bottom: 0.7em;   /* REDUCED bottom margin */
+    }
+    
     .entry-title { grid-column: 1; text-align: left; }
     .leader { grid-column: 2; border-bottom: 1px dotted rgba(0,0,0,0.5); margin-bottom: 4px; }
     .page-number { grid-column: 3; text-align: right; }
     .entry-title a { text-decoration: none; color: black; }
+
+    /* Other styles are unchanged */
     .debug-page pre { white-space: pre-wrap; word-wrap: break-word; font-size: 8pt; line-height: 1.1; }
     .swapi-text{ text-align: center }
     .image-page { margin: 0; } .image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -123,9 +130,8 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     .subtitle { font-size: 14pt; margin: 1em 0; letter-spacing: 0.2em; text-transform: uppercase; }
     .title-decoration { font-size: 24pt; margin: 1em 0; color: #555; }
     .print-date-page p { text-align: center; font-style: italic; font-size: 10pt; }
-    .chapter-title-content { text-align: center; padding: 2em; }
+    .chapter-title-content { text-align: center; padding: 2em; font-size: 30pt; }
     .chapter-number { display: block; font-size: 16pt; font-style: italic; color: #666; margin-bottom: 1.5em; text-transform: uppercase; }
-    .chapter-title-content h2 { font-size: 32pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.3; }
     .content-page { padding: 0; }
     .content-page h2 { font-size: 20pt; text-transform: uppercase; margin-bottom: 2.5em; letter-spacing: 0.1em; }
     .content-block { margin: 0 auto; max-width: 100%; }
