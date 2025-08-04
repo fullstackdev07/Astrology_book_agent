@@ -1,5 +1,4 @@
-# app/book_writer.py
-
+# app/book_writer.py 
 from openai import AsyncOpenAI
 import os
 import asyncio
@@ -9,7 +8,7 @@ import string
 import httpx
 from app.prompt_builder import (
     build_book_structure_prompt,
-    build_prologue_prompt, # <-- ADDED
+    build_prologue_prompt,
     build_dynamic_chapter_prompt,
     build_summarization_prompt,
     build_safe_image_prompt_generation_prompt

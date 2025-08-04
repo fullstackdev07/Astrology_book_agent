@@ -7,7 +7,8 @@ import pathlib
 
 def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     """
-    Generates the final, professionally formatted PDF with all structure requirements met.
+    Generates the final, professionally formatted PDF using a two-pass render
+    to guarantee correct page numbers in the Table of Contents.
     """
     output_dir = "generated_books"
     os.makedirs(output_dir, exist_ok=True)
@@ -15,7 +16,6 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
 
     # --- Prepare all data for the template ---
     all_sections_for_toc = []
-    
     if book_data.get('preface_text'):
         all_sections_for_toc.append({"title": "Preface", "href": "#preface"})
     if book_data.get('prologue_text'):
@@ -27,26 +27,18 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         epilogue_title = book_data.get('epilogue_title', "Epilogue")
         all_sections_for_toc.append({"title": epilogue_title, "href": "#epilogue"})
 
-    toc_style_block = """
-    .toc-page { padding-top: 1.2em !important; }
-    .toc-page h1 { font-size: 24pt !important; margin-bottom: 1.2em !important; }
-    .toc-entry { font-size: 10pt !important; line-height: 1.3 !important; margin-bottom: 1.0em !important; }
-    """
-
-    template_context = {
-        "book_title": title,
-        "print_date": datetime.now().strftime("%B %d, %Y"),
-        "toc_entries": all_sections_for_toc,
-        "toc_style_block": toc_style_block,
-        **book_data
-    }
-    
+    # --- Define HTML Template and CSS ---
+    # The template uses a `page_map` variable. It will be empty on the first pass
+    # and populated with page numbers on the second pass.
     html_template = Template("""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8"><title>{{ book_title }}</title>
-        <style>{{ toc_style_block }}</style>
+        <style>
+            .toc-page h1 { font-size: 24pt !important; margin-bottom: 1.2em !important; }
+            .toc-entry { font-size: 10pt !important; line-height: 1.3 !important; margin-bottom: 1.0em !important; }
+        </style>
     </head>
     <body>
         <div class="page swapi-call-page debug-page"><h1>Data Source</h1><pre class="swapi-text">{{ swapi_call_text }}</pre></div>
@@ -56,7 +48,17 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         <div class="page title-page"><div class="title-main-block"><div class="title-decoration">✧</div><h1 class="book-title">{{ book_title }}</h1><div class="title-decoration">✦</div><h2 class="subtitle">A PERSONAL INTERPRETATION</h2></div></div>
         <div class="page print-date-page"><p>A personalized edition created on<br>{{ print_date }}</p></div>
         <div class="page blank-page"></div><div class="page blank-page"></div>
-        <div class="page toc-page"><h1>Contents</h1><div class="toc-list">{% for entry in toc_entries %}<div class="toc-entry"><span class="entry-title">{{ entry.title }}</span><span class="leader"></span><a href="{{ entry.href }}"></a></div>{% endfor %}</div></div>
+        <div class="page toc-page"><h1>Contents</h1><div class="toc-list">
+            {% for entry in toc_entries %}
+                <div class="toc-entry">
+                    <span class="entry-title"><a href="{{ entry.href }}">{{ entry.title }}</a></span>
+                    <span class="leader"></span>
+                    <span class="page-number">
+                        {% if page_map %}{{ page_map.get(entry.href) }}{% endif %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div></div>
         <div class="page blank-page"></div>
         
         <div class="main-content-body">
@@ -68,77 +70,43 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     </body>
     </html>
     """)
-    rendered_html = html_template.render(template_context)
-
+    
     fonts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'fonts'))
     baskerville_regular_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Regular.ttf'))).as_uri()
     baskerville_italic_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Italic.ttf'))).as_uri()
     baskerville_bold_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Bold.ttf'))).as_uri()
     font_config = f"""@font-face{{font-family:'Baskerville';src:url('{baskerville_regular_uri}');}}@font-face{{font-family:'Baskerville';font-style:italic;src:url('{baskerville_italic_uri}');}}@font-face{{font-family:'Baskerville';font-weight:bold;src:url('{baskerville_bold_uri}');}}"""
-    
-    # <<<====== UPDATED CSS TO INCLUDE BLANK PAGES IN NUMBERING ======>>>
-    main_css = """
-    /* Default page style for front-matter. No page numbers. */
+
+    main_css_string = """
     @page { size: 140mm 216mm; margin: 25mm; }
-    
-    /* Style for blank pages, also no page numbers. */
     @page:blank { @bottom-center { content: ""; } }
-    
-    /* Named page style for the main book content that requires numbering. */
     @page numbered {
         counter-increment: main-content-counter;
-        @bottom-center {
-            content: counter(main-content-counter);
-            font-family: 'Baskerville', serif;
-            font-size: 9pt;
-        }
+        @bottom-center { content: counter(main-content-counter); font-family: 'Baskerville', serif; font-size: 9pt; }
     }
-    
-    body {
-        font-family: 'Baskerville', serif;
-        font-size: 11pt;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-    }
-
+    body { font-family: 'Baskerville', serif; font-size: 11pt; line-height: 1.6; counter-reset: main-content-counter; }
     .page { page-break-after: always; position: relative; height: 100%; }
     body > div:last-of-type { page-break-after: auto; }
     h1, h2, h3 { font-weight: bold; margin: 0; text-align: center; }
-
-    /* --- THE UPDATED PAGE NUMBERING SOLUTION --- */
-    /* Apply the 'numbered' page style to the main content block and reset the counter. */
-    .main-content-body {
-        page: numbered; 
-        counter-reset: main-content-counter 0; 
-    }
-    
-    /* The override rule for .blank-page inside .main-content-body has been REMOVED. */
-    /* Now, blank pages within the main content will inherit the `page: numbered` style */
-    /* and be included in the page count. */
-
+    .main-content-body > .page { page: numbered; }
+    .toc-page { padding: 2em 0; }
+    .toc-list { width: 85%; margin: 0 auto; }
+    .toc-entry { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 0 0.7em; }
+    .entry-title { grid-column: 1; text-align: left; }
+    .leader { grid-column: 2; border-bottom: 1px dotted rgba(0,0,0,0.5); margin-bottom: 4px; }
+    .page-number { grid-column: 3; text-align: right; }
+    .entry-title a { text-decoration: none; color: black; }
     .debug-page pre { white-space: pre-wrap; word-wrap: break-word; font-size: 8pt; line-height: 1.1; }
     .swapi-text{ text-align: center }
-    
-    .image-page { margin: 0; }
-    .image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .image-page { margin: 0; } .image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .title-page, .print-date-page, .chapter-title-page { display: flex; align-items: center; justify-content: center; }
     .title-main-block { margin: auto 0; text-align: center; }
     .book-title { font-size: 38pt; font-weight: bold; margin: 0.5em 0; line-height: 1.2; }
     .subtitle { font-size: 14pt; margin: 1em 0; letter-spacing: 0.2em; text-transform: uppercase; }
     .title-decoration { font-size: 24pt; margin: 1em 0; color: #555; }
     .print-date-page p { text-align: center; font-style: italic; font-size: 10pt; }
-    .toc-page { padding: 2em 0; }
-    .toc-list { width: 85%; margin: 0 auto; }
-    .toc-entry { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 0 0.7em; }
-    .entry-title { grid-column: 1; text-align: left; }
-    .leader { grid-column: 2; border-bottom: 1px dotted rgba(0,0,0,0.5); margin-bottom: 4px; }
-    .toc-entry a { grid-column: 3; text-align: right; text-decoration: none; color: black; }
-    .toc-entry a::after { content: target-counter(attr(href), main-content-counter); }
-    
     .chapter-title-content { text-align: center; padding: 2em; }
     .chapter-number { display: block; font-size: 16pt; font-style: italic; color: #666; margin-bottom: 1.5em; text-transform: uppercase; }
-    .chapter-title-content h2 { font-size: 32pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; line-height: 1.3; }
-    .content-page { padding: 0; }
     .content-page h2 { font-size: 20pt; text-transform: uppercase; margin-bottom: 2.5em; letter-spacing: 0.1em; }
     .content-block { margin: 0 auto; max-width: 100%; }
     .content-block p { text-align: justify; text-indent: 2em; margin-bottom: 0; line-height: 1.7; hyphens: auto; }
@@ -146,9 +114,45 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     .content-block p:first-child { text-indent: 0; }
     .content-block p:first-child::first-letter { font-size: 3.5em;font-weight: bold;}
     """
-    
-    css = CSS(string=font_config + main_css)
+    css = CSS(string=font_config + main_css_string)
     base_url = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    HTML(string=rendered_html, base_url=base_url).write_pdf(output_path, stylesheets=[css])
+
+    # --- PASS 1: Render a draft to find the real page number of each anchor ---
+    print("--- Starting Pass 1: Finding page numbers... ---")
+    draft_context = {"page_map": None, "toc_entries": all_sections_for_toc, **book_data, "title": title}
+    draft_html = html_template.render(draft_context)
+    doc = HTML(string=draft_html, base_url=base_url).render(stylesheets=[css])
+    
+    first_content_page_index = -1
+    target_anchors = {entry['href'][1:] for entry in all_sections_for_toc}
+    for p, page in enumerate(doc.pages):
+        page_has_target_anchor = any(anchor in target_anchors for anchor in page.anchors)
+        if page_has_target_anchor:
+            first_content_page_index = p
+            break
+            
+    if first_content_page_index == -1:
+        raise RuntimeError("Could not find the start of the main content to calculate page numbers.")
+
+    page_map = {}
+    for p, page in enumerate(doc.pages):
+        if p >= first_content_page_index:
+            real_page_number = (p - first_content_page_index) + 1
+            for anchor_name in page.anchors:
+                href = f'#{anchor_name}'
+                # <<< THE FIX IS HERE >>>
+                # Only add the anchor to the map if it's one we care about
+                # AND if we haven't already recorded it. This prevents overwriting
+                # the starting page number with the ending page number.
+                if anchor_name in target_anchors and href not in page_map:
+                    page_map[href] = real_page_number
+    
+    print(f"--- Pass 1 Complete. Found page numbers: {page_map} ---")
+
+    # --- PASS 2: Render the final PDF, injecting the correct page numbers into the TOC ---
+    print("--- Starting Pass 2: Rendering final PDF... ---")
+    final_context = {"page_map": page_map, "toc_entries": all_sections_for_toc, **book_data, "title": title}
+    final_html = html_template.render(final_context)
+    HTML(string=final_html, base_url=base_url).write_pdf(output_path, stylesheets=[css])
     
     return output_path
