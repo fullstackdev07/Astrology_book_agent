@@ -76,7 +76,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     baskerville_bold_uri = pathlib.Path(os.path.abspath(os.path.join(fonts_dir, 'LibreBaskerville-Bold.ttf'))).as_uri()
     font_config = f"""@font-face{{font-family:'Baskerville';src:url('{baskerville_regular_uri}');}}@font-face{{font-family:'Baskerville';font-style:italic;src:url('{baskerville_italic_uri}');}}@font-face{{font-family:'Baskerville';font-weight:bold;src:url('{baskerville_bold_uri}');}}"""
     
-    # <<<====== CORRECTED CSS FOR PAGE NUMBERING ======>>>
+    # <<<====== UPDATED CSS TO INCLUDE BLANK PAGES IN NUMBERING ======>>>
     main_css = """
     /* Default page style for front-matter. No page numbers. */
     @page { size: 140mm 216mm; margin: 25mm; }
@@ -86,7 +86,7 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
     
     /* Named page style for the main book content that requires numbering. */
     @page numbered {
-        counter-increment: main-content-counter; /* THE FIX: Increment on each page. */
+        counter-increment: main-content-counter;
         @bottom-center {
             content: counter(main-content-counter);
             font-family: 'Baskerville', serif;
@@ -99,24 +99,22 @@ def save_book_as_pdf(title: str, book_data: dict, filename: str) -> str:
         font-size: 11pt;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
-        /* Counter is NOT reset here anymore. */
     }
 
     .page { page-break-after: always; position: relative; height: 100%; }
     body > div:last-of-type { page-break-after: auto; }
     h1, h2, h3 { font-weight: bold; margin: 0; text-align: center; }
 
-    /* --- THE CORRECT PAGE NUMBERING SOLUTION --- */
+    /* --- THE UPDATED PAGE NUMBERING SOLUTION --- */
+    /* Apply the 'numbered' page style to the main content block and reset the counter. */
     .main-content-body {
-        page: numbered; /* 1. Apply the 'numbered' page style to the main content block. */
-        counter-reset: main-content-counter 0; /* 2. Reset the counter right before the content starts. */
+        page: numbered; 
+        counter-reset: main-content-counter 0; 
     }
     
-    /* 3. Blank pages inside the main content should use the 'blank' page style. */
-    /*    This is crucial to prevent them from being numbered or incrementing the counter. */
-    .main-content-body .blank-page {
-        page: blank;
-    }
+    /* The override rule for .blank-page inside .main-content-body has been REMOVED. */
+    /* Now, blank pages within the main content will inherit the `page: numbered` style */
+    /* and be included in the page count. */
 
     .debug-page pre { white-space: pre-wrap; word-wrap: break-word; font-size: 8pt; line-height: 1.1; }
     .swapi-text{ text-align: center }
