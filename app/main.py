@@ -44,7 +44,6 @@ def sanitize_filename(text: str) -> str:
     sanitized = re.sub(r'[\\/*?:"<>|]', "", text)
     return sanitized[:50].strip().replace(' ', '_')
 
-# YOUR ORIGINAL FUNCTION - UNTOUCHED
 async def extract_birth_data_from_prompt(prompt: str) -> dict:
     """
     Uses an LLM to parse a natural language prompt into structured birth data,

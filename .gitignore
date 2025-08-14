@@ -1,2 +1,15 @@
-.env
+# Python
+__pycache__/
+*.pyc
 venv/
+.env
+
+# Generated content
+generated_books/
+generated_images/
+
+# Terraform state
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+lambda_payload.zip
